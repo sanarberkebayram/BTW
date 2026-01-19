@@ -1,0 +1,30 @@
+{
+  "name": "btw-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "btw": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "cli": "node dist/cli.js",
+    "test": "npm run build && node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/blessed": "^0.1.27",
+    "better-sqlite3": "^12.6.2",
+    "blessed": "^0.1.81",
+    "fastify": "^4.26.0",
+    "js-yaml": "^4.1.0",
+    "jsonschema": "^1.4.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}
