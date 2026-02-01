@@ -78,7 +78,12 @@ async function getAllWorkflowsWithStatus(
   const entries = await fileSystem.readdir(workflowsDir);
 
   for (const entry of entries) {
-    const workflowPath = path.join(workflowsDir, entry);
+    // Skip non-directories
+    if (!entry.isDirectory) {
+      continue;
+    }
+
+    const workflowPath = entry.path;
     const manifestPath = path.join(workflowPath, MANIFEST_FILENAME);
 
     // Check if it's a valid workflow with manifest
