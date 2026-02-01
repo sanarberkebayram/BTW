@@ -5,6 +5,9 @@
  */
 
 import { Command } from 'commander';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { createAddCommand } from './commands/add.js';
 import { createListCommand } from './commands/list.js';
 import { createInjectCommand } from './commands/inject.js';
@@ -14,9 +17,32 @@ import { output } from './utils/output.js';
 import { checkForUpdates } from './utils/updateChecker.js';
 
 /**
- * BTW CLI version
+ * BTW CLI version - read from package.json to stay in sync
  */
-const VERSION = '0.4.1';
+function getVersion(): string {
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    // Try multiple paths to find package.json (works in both src and dist)
+    const paths = [
+      join(__dirname, '..', 'package.json'),      // from dist/index.js
+      join(__dirname, '..', '..', 'package.json'), // from src/cli/index.ts
+    ];
+    for (const pkgPath of paths) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+        if (pkg.version) return pkg.version;
+      } catch {
+        continue;
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  return '0.0.0';
+}
+
+const VERSION = getVersion();
 
 /**
  * Create and configure the CLI program
