@@ -400,8 +400,137 @@ export class StateManager {
   private createEmptyState(): BTWState {
     return {
       version: STATE_VERSION,
+      globalWorkflows: [],
       projects: {},
     };
+  }
+
+  /**
+   * Get all globally installed workflows
+   */
+  getGlobalWorkflows(): WorkflowState[] {
+    if (!this.state) {
+      throw new BTWError(ErrorCode.STATE_NOT_FOUND, 'State not initialized');
+    }
+    return this.state.globalWorkflows || [];
+  }
+
+  /**
+   * Add a workflow globally
+   * @param workflowState - Workflow state to add
+   */
+  addGlobalWorkflow(workflowState: WorkflowState): void {
+    if (!this.state) {
+      throw new BTWError(ErrorCode.STATE_NOT_FOUND, 'State not initialized');
+    }
+
+    // Ensure globalWorkflows array exists
+    if (!this.state.globalWorkflows) {
+      this.state.globalWorkflows = [];
+    }
+
+    // Check if workflow already exists
+    const existingWorkflow = this.state.globalWorkflows.find(
+      (w) => w.workflowId === workflowState.workflowId
+    );
+    if (existingWorkflow) {
+      throw new BTWError(
+        ErrorCode.WORKFLOW_ALREADY_EXISTS,
+        `Workflow '${workflowState.workflowId}' is already installed globally`,
+        { context: { workflowId: workflowState.workflowId } }
+      );
+    }
+
+    // Add workflow
+    this.state.globalWorkflows.push(workflowState);
+
+    // Mark as dirty
+    this.isDirty = true;
+  }
+
+  /**
+   * Remove a workflow globally
+   * @param workflowId - Workflow ID to remove
+   */
+  removeGlobalWorkflow(workflowId: string): void {
+    if (!this.state) {
+      throw new BTWError(ErrorCode.STATE_NOT_FOUND, 'State not initialized');
+    }
+
+    if (!this.state.globalWorkflows) {
+      throw new BTWError(
+        ErrorCode.WORKFLOW_NOT_FOUND,
+        `Workflow '${workflowId}' is not installed globally`,
+        { context: { workflowId } }
+      );
+    }
+
+    // Find workflow index
+    const workflowIndex = this.state.globalWorkflows.findIndex(
+      (w) => w.workflowId === workflowId
+    );
+    if (workflowIndex === -1) {
+      throw new BTWError(
+        ErrorCode.WORKFLOW_NOT_FOUND,
+        `Workflow '${workflowId}' is not installed globally`,
+        { context: { workflowId } }
+      );
+    }
+
+    // Remove workflow
+    this.state.globalWorkflows.splice(workflowIndex, 1);
+
+    // Mark as dirty
+    this.isDirty = true;
+  }
+
+  /**
+   * Update a global workflow's state
+   * @param workflowId - Workflow ID
+   * @param updates - Partial workflow state updates
+   */
+  updateGlobalWorkflow(workflowId: string, updates: Partial<WorkflowState>): void {
+    if (!this.state) {
+      throw new BTWError(ErrorCode.STATE_NOT_FOUND, 'State not initialized');
+    }
+
+    if (!this.state.globalWorkflows) {
+      throw new BTWError(
+        ErrorCode.WORKFLOW_NOT_FOUND,
+        `Workflow '${workflowId}' is not installed globally`,
+        { context: { workflowId } }
+      );
+    }
+
+    // Find workflow
+    const workflow = this.state.globalWorkflows.find(
+      (w) => w.workflowId === workflowId
+    );
+    if (!workflow) {
+      throw new BTWError(
+        ErrorCode.WORKFLOW_NOT_FOUND,
+        `Workflow '${workflowId}' is not installed globally`,
+        { context: { workflowId } }
+      );
+    }
+
+    // Merge updates
+    Object.assign(workflow, updates);
+
+    // Mark as dirty
+    this.isDirty = true;
+  }
+
+  /**
+   * Get a global workflow by ID
+   * @param workflowId - Workflow ID
+   */
+  getGlobalWorkflow(workflowId: string): WorkflowState | undefined {
+    if (!this.state) {
+      throw new BTWError(ErrorCode.STATE_NOT_FOUND, 'State not initialized');
+    }
+
+    return this.state.globalWorkflows?.find((w) => w.workflowId === workflowId);
   }
 
   /**
@@ -424,6 +553,11 @@ export class StateManager {
     // Check projects is an object
     if (!stateObj.projects || typeof stateObj.projects !== 'object') {
       return false;
+    }
+
+    // Initialize globalWorkflows if missing (backward compatibility)
+    if (!Array.isArray(stateObj.globalWorkflows)) {
+      stateObj.globalWorkflows = [];
     }
 
     return true;

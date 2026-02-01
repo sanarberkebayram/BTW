@@ -41,6 +41,7 @@ describe('StateManager', () => {
   // Helper to create a valid empty state
   const createEmptyState = (): BTWState => ({
     version: STATE_VERSION,
+    globalWorkflows: [],
     projects: {},
   });
 

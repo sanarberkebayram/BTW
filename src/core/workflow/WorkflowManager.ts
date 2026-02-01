@@ -259,12 +259,9 @@ export class WorkflowManager {
         active: true,
       };
 
-      // 7. Get current project path
-      const projectPath = process.cwd();
-
-      // 8. Add to state (handle force update case)
+      // 7. Add to global state (handle force update case)
       try {
-        stateManager.addWorkflow(projectPath, workflowState);
+        stateManager.addGlobalWorkflow(workflowState);
       } catch (error) {
         // If workflow already exists in state and force is enabled, update it
         if (
@@ -272,16 +269,16 @@ export class WorkflowManager {
           error.code === ErrorCode.WORKFLOW_ALREADY_EXISTS &&
           options.force
         ) {
-          stateManager.updateWorkflow(projectPath, workflowId, workflowState);
+          stateManager.updateGlobalWorkflow(workflowId, workflowState);
         } else {
           throw error;
         }
       }
 
-      // 9. Save state
+      // 8. Save state
       await stateManager.save();
 
-      // 10. Return success with WorkflowState
+      // 9. Return success with WorkflowState
       return {
         success: true,
         data: workflowState,
@@ -301,7 +298,7 @@ export class WorkflowManager {
   }
 
   /**
-   * List installed workflows
+   * List installed workflows (globally)
    * @param options - List options
    */
   async list(options?: ListWorkflowsOptions): Promise<OperationResult<WorkflowDetails[]>> {
@@ -309,26 +306,17 @@ export class WorkflowManager {
       // 1. Initialize state manager
       await stateManager.initialize();
 
-      // 2. Get project state
-      const projectPath = process.cwd();
-      const projectState = stateManager.getProjectState(projectPath);
+      // 2. Get global workflows
+      const globalWorkflows = stateManager.getGlobalWorkflows();
 
-      // 3. If no project state, return empty array
-      if (!projectState || !projectState.workflows) {
-        return {
-          success: true,
-          data: [],
-        };
-      }
-
-      // 4. Filter workflows by options
-      let workflows = [...projectState.workflows];
+      // 3. Filter workflows by options
+      let workflows = [...globalWorkflows];
 
       if (options?.activeOnly) {
         workflows = workflows.filter((w) => w.active === true);
       }
 
-      // 5. Build WorkflowDetails array
+      // 4. Build WorkflowDetails array
       const workflowDetails: WorkflowDetails[] = [];
 
       for (const workflow of workflows) {
@@ -336,7 +324,7 @@ export class WorkflowManager {
           state: workflow,
         };
 
-        // 6. If detailed, load manifest for each workflow
+        // 5. If detailed, load manifest for each workflow
         if (options?.detailed) {
           try {
             const workflowPath = pathResolver.getWorkflowPath(workflow.workflowId);
@@ -362,7 +350,7 @@ export class WorkflowManager {
         workflowDetails.push(detail);
       }
 
-      // 7. Return success with array
+      // 6. Return success with array
       return {
         success: true,
         data: workflowDetails,
@@ -382,7 +370,7 @@ export class WorkflowManager {
   }
 
   /**
-   * Get a specific workflow by ID
+   * Get a specific workflow by ID (from global state)
    * @param workflowId - Workflow identifier
    */
   async get(workflowId: string): Promise<OperationResult<WorkflowDetails>> {
@@ -390,23 +378,10 @@ export class WorkflowManager {
       // 1. Initialize state manager
       await stateManager.initialize();
 
-      // 2. Get project state
-      const projectPath = process.cwd();
-      const projectState = stateManager.getProjectState(projectPath);
+      // 2. Get workflow from global state
+      const workflowState = stateManager.getGlobalWorkflow(workflowId);
 
-      // 3. Find workflow by ID in project.workflows
-      if (!projectState || !projectState.workflows) {
-        return {
-          success: false,
-          error: 'Workflow not found',
-        };
-      }
-
-      const workflowState = projectState.workflows.find(
-        (w) => w.workflowId === workflowId
-      );
-
-      // 4. If not found, return error
+      // 3. If not found, return error
       if (!workflowState) {
         return {
           success: false,
@@ -414,7 +389,7 @@ export class WorkflowManager {
         };
       }
 
-      // 5. Load manifest from workflow path
+      // 4. Load manifest from workflow path
       const workflowPath = pathResolver.getWorkflowPath(workflowId);
       const manifestPath = path.join(workflowPath, MANIFEST_FILENAME);
 
@@ -426,7 +401,7 @@ export class WorkflowManager {
         // If manifest can't be loaded, continue without it
       }
 
-      // 6. Return WorkflowDetails with state and manifest
+      // 5. Return WorkflowDetails with state and manifest
       return {
         success: true,
         data: {
@@ -449,7 +424,7 @@ export class WorkflowManager {
   }
 
   /**
-   * Remove a workflow
+   * Remove a workflow (globally)
    * @param options - Remove options
    */
   async remove(options: RemoveWorkflowOptions): Promise<OperationResult> {
@@ -489,12 +464,9 @@ export class WorkflowManager {
         }
       }
 
-      // 5. Get current project path
-      const projectPath = process.cwd();
-
-      // 6. Remove from state
+      // 5. Remove from global state
       try {
-        stateManager.removeWorkflow(projectPath, workflowId);
+        stateManager.removeGlobalWorkflow(workflowId);
       } catch (error) {
         // Ignore if workflow not found in state (already removed)
         if (
@@ -505,10 +477,10 @@ export class WorkflowManager {
         }
       }
 
-      // 7. Save state
+      // 6. Save state
       await stateManager.save();
 
-      // 8. Return success
+      // 7. Return success
       return {
         success: true,
       };
@@ -583,8 +555,7 @@ export class WorkflowManager {
           // Keep existing version if manifest can't be parsed
         }
 
-        // Update state with new version/hash
-        const projectPath = process.cwd();
+        // Update global state with new version/hash
         const updates: Partial<WorkflowState> = {
           version: newVersion,
         };
@@ -592,7 +563,7 @@ export class WorkflowManager {
           updates.contentHash = newCommitHash;
         }
 
-        stateManager.updateWorkflow(projectPath, workflowId, updates);
+        stateManager.updateGlobalWorkflow(workflowId, updates);
 
         // Save state
         await stateManager.save();
@@ -658,7 +629,7 @@ export class WorkflowManager {
   }
 
   /**
-   * Check if a workflow is installed
+   * Check if a workflow is installed (globally)
    * @param workflowId - Workflow identifier
    */
   async isInstalled(workflowId: string): Promise<boolean> {
@@ -666,20 +637,15 @@ export class WorkflowManager {
       // 1. Initialize state manager
       await stateManager.initialize();
 
-      // 2. Get project state
-      const projectPath = process.cwd();
-      const projectState = stateManager.getProjectState(projectPath);
+      // 2. Check if workflow exists in global state
+      const globalWorkflow = stateManager.getGlobalWorkflow(workflowId);
+      const existsInState = !!globalWorkflow;
 
-      // 3. Check if workflow exists in project.workflows by ID
-      const existsInState =
-        projectState?.workflows?.some((w) => w.workflowId === workflowId) ??
-        false;
-
-      // 4. Also verify files exist
+      // 3. Also verify files exist
       const workflowPath = pathResolver.getWorkflowPath(workflowId);
       const filesExist = await fileSystem.exists(workflowPath);
 
-      // 5. Return true only if both state and files exist
+      // 4. Return true if either state or files exist
       return existsInState || filesExist;
     } catch {
       return false;

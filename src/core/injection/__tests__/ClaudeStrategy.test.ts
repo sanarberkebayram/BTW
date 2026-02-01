@@ -42,6 +42,17 @@ import { fileSystem } from '../../../infrastructure/fs/FileSystem.js';
 const BTW_START_MARKER = '<!-- BTW_START -->';
 const BTW_END_MARKER = '<!-- BTW_END -->';
 
+// Helper to create FileInfo objects for mocking readdir
+function createFileInfo(name: string, basePath: string): { name: string; path: string; isDirectory: boolean; isFile: boolean; size: number } {
+  return {
+    name,
+    path: `${basePath}/${name}`,
+    isDirectory: false,
+    isFile: true,
+    size: 100,
+  };
+}
+
 function createTestManifest(overrides?: Partial<Manifest>): Manifest {
   return {
     version: '1.0',
@@ -183,31 +194,35 @@ describe('ClaudeStrategy', () => {
 
     describe('force option', () => {
       it('should remove existing BTW agents when force is true', async () => {
-        vi.mocked(fileSystem.readdir).mockResolvedValue(['old-agent.md']);
-        vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: old-workflow');
+        vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('old-agent.md', agentsPath)]);
+        vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
 
         const manifest = createTestManifest();
 
         await strategy.inject(manifest, { projectRoot, force: true });
 
+        // With the new multi-workflow support, force removes agents for THIS workflow only
+        // Since old-agent.md belongs to test-workflow (same as manifest), it should be removed
         expect(fileSystem.remove).toHaveBeenCalledWith(`${agentsPath}/old-agent.md`);
       });
 
-      it('should reject injection without force when different workflow exists', async () => {
-        vi.mocked(fileSystem.readdir).mockResolvedValue(['old-agent.md']);
-        vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: different-workflow');
-
-        const manifest = createTestManifest();
-
-        await expect(strategy.inject(manifest, options)).rejects.toThrow(BTWError);
-      });
-
-      it('should allow injection when same workflow exists', async () => {
-        vi.mocked(fileSystem.readdir).mockResolvedValue(['test-agent.md']);
+      it('should reject injection without force when same workflow already exists', async () => {
+        vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('test-agent.md', agentsPath)]);
         vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
 
         const manifest = createTestManifest();
 
+        // With multi-workflow support, it rejects when the SAME workflow is already injected
+        await expect(strategy.inject(manifest, options)).rejects.toThrow(BTWError);
+      });
+
+      it('should allow injection when different workflow exists (multi-workflow support)', async () => {
+        vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('other-agent.md', agentsPath)]);
+        vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: different-workflow');
+
+        const manifest = createTestManifest();
+
+        // Multi-workflow support allows different workflows to coexist
         const result = await strategy.inject(manifest, options);
 
         expect(result.target).toBe('claude');
@@ -216,12 +231,14 @@ describe('ClaudeStrategy', () => {
 
     describe('backup functionality', () => {
       it('should create backup of existing agents when backup option is true', async () => {
-        vi.mocked(fileSystem.readdir).mockResolvedValue(['test-agent.md']);
+        vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('test-agent.md', agentsPath)]);
         vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
 
         const manifest = createTestManifest();
 
-        await strategy.inject(manifest, { projectRoot, backup: true });
+        // Backup only happens for agents of the SAME workflow being re-injected
+        // Since workflow is already injected, we need force to re-inject
+        await strategy.inject(manifest, { projectRoot, backup: true, force: true });
 
         expect(fileSystem.backup).toHaveBeenCalledWith(`${agentsPath}/test-agent.md`);
       });
@@ -262,7 +279,7 @@ describe('ClaudeStrategy', () => {
     const options: EjectOptions = { projectRoot };
 
     it('should remove BTW agent files', async () => {
-      vi.mocked(fileSystem.readdir).mockResolvedValue(['test-agent.md']);
+      vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('test-agent.md', agentsPath)]);
       vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
       vi.mocked(fileSystem.exists).mockResolvedValue(true);
 
@@ -309,7 +326,7 @@ ${BTW_END_MARKER}`;
     });
 
     it('should remove empty agents directory', async () => {
-      vi.mocked(fileSystem.readdir).mockResolvedValueOnce(['test-agent.md']).mockResolvedValueOnce([]);
+      vi.mocked(fileSystem.readdir).mockResolvedValueOnce([createFileInfo('test-agent.md', agentsPath)]).mockResolvedValueOnce([]);
       vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
       vi.mocked(fileSystem.exists).mockResolvedValue(true);
 
@@ -329,7 +346,7 @@ ${BTW_END_MARKER}`;
     });
 
     it('should return injected status when BTW agents exist', async () => {
-      vi.mocked(fileSystem.readdir).mockResolvedValue(['test-agent.md']);
+      vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('test-agent.md', agentsPath)]);
       vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
       vi.mocked(fileSystem.exists).mockResolvedValue(false);
 
@@ -340,7 +357,7 @@ ${BTW_END_MARKER}`;
     });
 
     it('should detect backup files', async () => {
-      vi.mocked(fileSystem.readdir).mockResolvedValue(['test-agent.md']);
+      vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('test-agent.md', agentsPath)]);
       vi.mocked(fileSystem.readFile).mockResolvedValue('# BTW metadata\n# workflow: test-workflow');
       vi.mocked(fileSystem.exists).mockImplementation(async (path) => {
         return path === `${agentsPath}/test-agent.md.btw-backup`;
@@ -363,7 +380,7 @@ ${BTW_END_MARKER}`;
 
     it('should return true when files are valid', async () => {
       vi.mocked(fileSystem.exists).mockResolvedValue(true);
-      vi.mocked(fileSystem.readdir).mockResolvedValue(['test-agent.md']);
+      vi.mocked(fileSystem.readdir).mockResolvedValue([createFileInfo('test-agent.md', agentsPath)]);
       vi.mocked(fileSystem.readFile).mockImplementation(async (path) => {
         if (path.endsWith('.json')) {
           return '{"valid": true}';

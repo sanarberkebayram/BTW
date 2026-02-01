@@ -102,9 +102,8 @@ async function getAllWorkflowsWithStatus(
         continue;
       }
 
-      // Check injection status
-      const status = await injectionEngine.getStatus(target, projectRoot);
-      const isInjected = status.isInjected && status.workflowId === manifest.id;
+      // Check if this specific workflow is injected
+      const isInjected = await injectionEngine.isWorkflowInjected(target, projectRoot, manifest.id);
 
       items.push({
         id: manifest.id,
@@ -152,9 +151,10 @@ async function executeInteractive(options: InjectCommandOptions): Promise<void> 
     // Toggle callback
     async (workflowId: string, currentlyActive: boolean) => {
       if (currentlyActive) {
-        // Eject the workflow
+        // Eject the specific workflow
         const result = await injectionEngine.eject(target, {
           projectRoot,
+          workflowId,
           clean: false,
         });
 

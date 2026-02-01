@@ -33,6 +33,12 @@ vi.mock('../../state/StateManager.js', () => ({
     addWorkflow: vi.fn(),
     removeWorkflow: vi.fn(),
     updateWorkflow: vi.fn(),
+    // Global workflow methods
+    getGlobalWorkflows: vi.fn(),
+    addGlobalWorkflow: vi.fn(),
+    removeGlobalWorkflow: vi.fn(),
+    updateGlobalWorkflow: vi.fn(),
+    getGlobalWorkflow: vi.fn(),
     save: vi.fn(),
   },
 }));
@@ -148,7 +154,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -158,7 +164,7 @@ describe('WorkflowManager', () => {
           'https://github.com/owner/repo.git',
           expect.objectContaining({ targetDir: '/workflows/repo', depth: 1 })
         );
-        expect(stateManager.addWorkflow).toHaveBeenCalled();
+        expect(stateManager.addGlobalWorkflow).toHaveBeenCalled();
         expect(stateManager.save).toHaveBeenCalled();
       });
 
@@ -185,7 +191,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -217,7 +223,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -248,7 +254,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -278,7 +284,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -305,7 +311,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -347,7 +353,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -384,7 +390,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -421,7 +427,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -447,7 +453,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -481,7 +487,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source, customId });
 
@@ -509,7 +515,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source, customId });
 
@@ -547,7 +553,7 @@ describe('WorkflowManager', () => {
           rawContent: '',
         });
         (stateManager.getProjectState as Mock).mockReturnValue(existingState);
-        (stateManager.addWorkflow as Mock).mockImplementation(() => {
+        (stateManager.addGlobalWorkflow as Mock).mockImplementation(() => {
           throw new BTWError(ErrorCode.WORKFLOW_ALREADY_EXISTS, 'Already exists');
         });
 
@@ -555,7 +561,7 @@ describe('WorkflowManager', () => {
 
         expect(result.success).toBe(true);
         expect(fileSystem.remove).toHaveBeenCalledWith('/workflows/repo', true);
-        expect(stateManager.updateWorkflow).toHaveBeenCalled();
+        expect(stateManager.updateGlobalWorkflow).toHaveBeenCalled();
       });
 
       it('should fail when workflow exists and force is false', async () => {
@@ -604,7 +610,7 @@ describe('WorkflowManager', () => {
           rawContent: '',
         });
         (stateManager.getProjectState as Mock).mockReturnValue(existingState);
-        (stateManager.addWorkflow as Mock).mockImplementation(() => {
+        (stateManager.addGlobalWorkflow as Mock).mockImplementation(() => {
           throw new BTWError(ErrorCode.WORKFLOW_ALREADY_EXISTS, 'Already exists');
         });
 
@@ -655,7 +661,7 @@ describe('WorkflowManager', () => {
         (gitClient.clone as Mock).mockRejectedValue(
           new BTWError(ErrorCode.GIT_CLONE_FAILED, 'Network error')
         );
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -680,7 +686,7 @@ describe('WorkflowManager', () => {
         });
         (gitClient.clone as Mock).mockResolvedValue({ success: true, exitCode: 0 });
         (fileSystem.remove as Mock).mockResolvedValue(undefined);
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -709,7 +715,7 @@ describe('WorkflowManager', () => {
           new BTWError(ErrorCode.MANIFEST_VALIDATION_ERROR, 'Invalid manifest')
         );
         (fileSystem.remove as Mock).mockResolvedValue(undefined);
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -727,7 +733,7 @@ describe('WorkflowManager', () => {
           return false;
         });
         (fileSystem.copy as Mock).mockRejectedValue(new Error('Permission denied'));
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -772,7 +778,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         await workflowManager.add({ source });
 
@@ -801,7 +807,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         await workflowManager.add({ source });
 
@@ -830,7 +836,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         const result = await workflowManager.add({ source });
 
@@ -851,18 +857,7 @@ describe('WorkflowManager', () => {
   // ==========================================================================
   describe('list()', () => {
     it('should return empty array when no workflows installed', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
-
-      const result = await workflowManager.list();
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual([]);
-    });
-
-    it('should return empty array when project has no workflows', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue([]);
 
       const result = await workflowManager.list();
 
@@ -876,9 +871,7 @@ describe('WorkflowManager', () => {
         createMockWorkflowState({ workflowId: 'workflow-2', active: false }),
         createMockWorkflowState({ workflowId: 'workflow-3', active: true }),
       ];
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows })
-      );
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue(workflows);
 
       const result = await workflowManager.list();
 
@@ -897,9 +890,7 @@ describe('WorkflowManager', () => {
         createMockWorkflowState({ workflowId: 'workflow-2', active: false }),
         createMockWorkflowState({ workflowId: 'workflow-3', active: true }),
       ];
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows })
-      );
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue(workflows);
 
       const result = await workflowManager.list({ activeOnly: true });
 
@@ -912,9 +903,7 @@ describe('WorkflowManager', () => {
       const mockManifest = createMockManifest({ id: 'workflow-1' });
       const workflows = [createMockWorkflowState({ workflowId: 'workflow-1' })];
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows })
-      );
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue(workflows);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: mockManifest,
         sourcePath: '/workflows/workflow-1/btw.yaml',
@@ -943,9 +932,7 @@ describe('WorkflowManager', () => {
         createMockWorkflowState({ workflowId: 'workflow-2' }),
       ];
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows })
-      );
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue(workflows);
       (manifestParser.parseFile as Mock)
         .mockResolvedValueOnce({
           manifest: manifest1,
@@ -970,9 +957,7 @@ describe('WorkflowManager', () => {
     it('should handle manifest load errors gracefully in detailed mode', async () => {
       const workflows = [createMockWorkflowState({ workflowId: 'workflow-1' })];
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows })
-      );
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue(workflows);
       (manifestParser.parseFile as Mock).mockRejectedValue(new Error('File not found'));
 
       const result = await workflowManager.list({ detailed: true });
@@ -983,7 +968,7 @@ describe('WorkflowManager', () => {
     });
 
     it('should initialize state manager', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflows as Mock).mockReturnValue([]);
 
       await workflowManager.list();
 
@@ -1008,9 +993,7 @@ describe('WorkflowManager', () => {
       const mockManifest = createMockManifest({ id: 'my-workflow' });
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: mockManifest,
         sourcePath: '/workflows/my-workflow/btw.yaml',
@@ -1026,20 +1009,9 @@ describe('WorkflowManager', () => {
     });
 
     it('should return error when workflow not found', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       const result = await workflowManager.get('nonexistent');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Workflow not found');
-    });
-
-    it('should return error when project state is null', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
-
-      const result = await workflowManager.get('any-workflow');
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Workflow not found');
@@ -1048,9 +1020,7 @@ describe('WorkflowManager', () => {
     it('should return workflow state even if manifest fails to load', async () => {
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockRejectedValue(new Error('Manifest not found'));
 
       const result = await workflowManager.get('my-workflow');
@@ -1061,7 +1031,7 @@ describe('WorkflowManager', () => {
     });
 
     it('should initialize state manager', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       await workflowManager.get('any');
 
@@ -1087,9 +1057,7 @@ describe('WorkflowManager', () => {
     it('should remove installed workflow', async () => {
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (fileSystem.exists as Mock).mockResolvedValue(true);
       (fileSystem.remove as Mock).mockResolvedValue(undefined);
 
@@ -1097,14 +1065,12 @@ describe('WorkflowManager', () => {
 
       expect(result.success).toBe(true);
       expect(fileSystem.remove).toHaveBeenCalledWith('/workflows/my-workflow', true);
-      expect(stateManager.removeWorkflow).toHaveBeenCalled();
+      expect(stateManager.removeGlobalWorkflow).toHaveBeenCalled();
       expect(stateManager.save).toHaveBeenCalled();
     });
 
     it('should return error when workflow not installed', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockResolvedValue(false);
 
       const result = await workflowManager.remove({ workflowId: 'nonexistent' });
@@ -1116,9 +1082,7 @@ describe('WorkflowManager', () => {
     it('should handle file removal errors gracefully when file not found', async () => {
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (fileSystem.exists as Mock).mockResolvedValue(true);
       (fileSystem.remove as Mock).mockRejectedValue(
         new BTWError(ErrorCode.FILE_NOT_FOUND, 'Directory not found')
@@ -1128,15 +1092,13 @@ describe('WorkflowManager', () => {
 
       // Should still succeed since workflow was in state
       expect(result.success).toBe(true);
-      expect(stateManager.removeWorkflow).toHaveBeenCalled();
+      expect(stateManager.removeGlobalWorkflow).toHaveBeenCalled();
     });
 
     it('should return error on other file removal errors', async () => {
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (fileSystem.exists as Mock).mockResolvedValue(true);
       (fileSystem.remove as Mock).mockRejectedValue(
         new BTWError(ErrorCode.PERMISSION_DENIED, 'Permission denied')
@@ -1149,12 +1111,10 @@ describe('WorkflowManager', () => {
     });
 
     it('should handle state removal errors gracefully when workflow not in state', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockResolvedValue(true); // Files exist but not in state
       (fileSystem.remove as Mock).mockResolvedValue(undefined);
-      (stateManager.removeWorkflow as Mock).mockImplementation(() => {
+      (stateManager.removeGlobalWorkflow as Mock).mockImplementation(() => {
         throw new BTWError(ErrorCode.WORKFLOW_NOT_FOUND, 'Not found in state');
       });
 
@@ -1166,7 +1126,7 @@ describe('WorkflowManager', () => {
     });
 
     it('should initialize state manager', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockResolvedValue(false);
 
       await workflowManager.remove({ workflowId: 'any' });
@@ -1196,9 +1156,7 @@ describe('WorkflowManager', () => {
         version: '1.0',
       });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: mockManifest,
         sourcePath: '/workflows/my-workflow/btw.yaml',
@@ -1215,14 +1173,12 @@ describe('WorkflowManager', () => {
       expect(result.data?.version).toBe('2.0');
       expect(result.data?.contentHash).toBe('abc123');
       expect(gitClient.pull).toHaveBeenCalledWith({ repoDir: '/workflows/my-workflow' });
-      expect(stateManager.updateWorkflow).toHaveBeenCalled();
+      expect(stateManager.updateGlobalWorkflow).toHaveBeenCalled();
       expect(stateManager.save).toHaveBeenCalled();
     });
 
     it('should return error when workflow not found', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       const result = await workflowManager.update('nonexistent');
 
@@ -1236,9 +1192,7 @@ describe('WorkflowManager', () => {
         source: '/path/to/local',
       });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: createMockManifest(),
         sourcePath: '/workflows/local-workflow/btw.yaml',
@@ -1258,9 +1212,7 @@ describe('WorkflowManager', () => {
         source: 'owner/repo',
       });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: createMockManifest(),
         sourcePath: '/workflows/my-workflow/btw.yaml',
@@ -1281,9 +1233,7 @@ describe('WorkflowManager', () => {
         source: 'owner/repo',
       });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: createMockManifest(),
         sourcePath: '/workflows/my-workflow/btw.yaml',
@@ -1306,9 +1256,7 @@ describe('WorkflowManager', () => {
         version: '1.0',
       });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       // First call for get() succeeds
       (manifestParser.parseFile as Mock)
         .mockResolvedValueOnce({
@@ -1337,9 +1285,7 @@ describe('WorkflowManager', () => {
       });
       const mockManifest = createMockManifest({ version: '2.0' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: mockManifest,
         sourcePath: '/workflows/my-workflow/btw.yaml',
@@ -1362,9 +1308,7 @@ describe('WorkflowManager', () => {
         source: 'owner/repo',
       });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (manifestParser.parseFile as Mock).mockResolvedValue({
         manifest: createMockManifest(),
         sourcePath: '/workflows/my-workflow/btw.yaml',
@@ -1452,9 +1396,7 @@ describe('WorkflowManager', () => {
     it('should return true when workflow exists in state and files exist', async () => {
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (fileSystem.exists as Mock).mockResolvedValue(true);
 
       const result = await workflowManager.isInstalled('my-workflow');
@@ -1465,9 +1407,7 @@ describe('WorkflowManager', () => {
     it('should return true when workflow exists in state but files missing', async () => {
       const workflowState = createMockWorkflowState({ workflowId: 'my-workflow' });
 
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [workflowState] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(workflowState);
       (fileSystem.exists as Mock).mockResolvedValue(false);
 
       const result = await workflowManager.isInstalled('my-workflow');
@@ -1476,9 +1416,7 @@ describe('WorkflowManager', () => {
     });
 
     it('should return true when files exist but not in state', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockResolvedValue(true);
 
       const result = await workflowManager.isInstalled('orphan-workflow');
@@ -1487,18 +1425,7 @@ describe('WorkflowManager', () => {
     });
 
     it('should return false when workflow not in state and files missing', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(
-        createMockProjectState({ workflows: [] })
-      );
-      (fileSystem.exists as Mock).mockResolvedValue(false);
-
-      const result = await workflowManager.isInstalled('nonexistent');
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when project state is null and files missing', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockResolvedValue(false);
 
       const result = await workflowManager.isInstalled('nonexistent');
@@ -1515,7 +1442,7 @@ describe('WorkflowManager', () => {
     });
 
     it('should initialize state manager', async () => {
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockResolvedValue(false);
 
       await workflowManager.isInstalled('any');
@@ -1554,7 +1481,7 @@ describe('WorkflowManager', () => {
             parsedAt: new Date(),
             rawContent: '',
           });
-          (stateManager.getProjectState as Mock).mockReturnValue(null);
+          (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
           await workflowManager.add({ source });
 
@@ -1582,7 +1509,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         await workflowManager.add({ source });
 
@@ -1613,7 +1540,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         await workflowManager.add({ source });
 
@@ -1644,7 +1571,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         await workflowManager.add({ source });
 
@@ -1675,7 +1602,7 @@ describe('WorkflowManager', () => {
           parsedAt: new Date(),
           rawContent: '',
         });
-        (stateManager.getProjectState as Mock).mockReturnValue(null);
+        (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
         await workflowManager.add({ source });
 
@@ -1735,7 +1662,7 @@ describe('WorkflowManager', () => {
         parsedAt: new Date(),
         rawContent: '',
       });
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       // Simulate concurrent add operations
       const results = await Promise.all([
@@ -1771,7 +1698,7 @@ describe('WorkflowManager', () => {
         parsedAt: new Date(),
         rawContent: '',
       });
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       const result = await workflowManager.add({ source });
 
@@ -1803,7 +1730,7 @@ describe('WorkflowManager', () => {
         parsedAt: new Date(),
         rawContent: '',
       });
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       const result = await workflowManager.add({ source: 'owner/repo', customId });
 
@@ -1839,7 +1766,7 @@ describe('WorkflowManager', () => {
         parsedAt: new Date(),
         rawContent: '',
       });
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       const result = await workflowManager.add({ source: 'owner/repo' });
 
@@ -1905,7 +1832,7 @@ describe('WorkflowManager', () => {
         parsedAt: new Date(),
         rawContent: '',
       });
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       // 1. Add workflow
       const addResult = await workflowManager.add({ source: 'owner/lifecycle-test' });
@@ -1972,7 +1899,7 @@ describe('WorkflowManager', () => {
         parsedAt: new Date(),
         rawContent: '',
       });
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
 
       const firstAdd = await workflowManager.add({ source: 'owner/repo' });
       expect(firstAdd.success).toBe(true);
@@ -1989,7 +1916,7 @@ describe('WorkflowManager', () => {
       expect(removeResult.success).toBe(true);
 
       // Re-add (reset mocks for clean state)
-      (stateManager.getProjectState as Mock).mockReturnValue(null);
+      (stateManager.getGlobalWorkflow as Mock).mockReturnValue(undefined);
       (fileSystem.exists as Mock).mockImplementation(async (path: string) => {
         if (path === '/workflows/repo') return false;
         if (path === '/workflows/repo/btw.yaml') return true;

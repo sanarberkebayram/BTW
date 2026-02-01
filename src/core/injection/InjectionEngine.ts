@@ -367,6 +367,32 @@ export class InjectionEngine {
     // Check if manifest declares support for this target
     return manifest.targets.includes(target);
   }
+
+  /**
+   * Check if a specific workflow is injected for a target
+   * @param target - AI target
+   * @param projectRoot - Project root directory
+   * @param workflowId - Workflow ID to check
+   */
+  async isWorkflowInjected(
+    target: AITarget,
+    projectRoot: string,
+    workflowId: string
+  ): Promise<boolean> {
+    const strategy = this.getStrategy(target);
+    if (!strategy) {
+      return false;
+    }
+
+    // Use strategy-specific method if available
+    if ('isWorkflowInjected' in strategy && typeof strategy.isWorkflowInjected === 'function') {
+      return (strategy as ClaudeStrategy).isWorkflowInjected(projectRoot, workflowId);
+    }
+
+    // Fallback to basic status check
+    const status = await strategy.getStatus(projectRoot);
+    return status.isInjected && status.workflowId === workflowId;
+  }
 }
 
 /**

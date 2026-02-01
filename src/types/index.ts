@@ -114,6 +114,8 @@ export interface ProjectState {
 export interface BTWState {
   /** State schema version */
   version: string;
+  /** Globally installed workflows (available to all projects) */
+  globalWorkflows: WorkflowState[];
   /** Map of project paths to their states */
   projects: Record<string, ProjectState>;
   /** Global configuration overrides */

@@ -25,6 +25,8 @@ export interface InjectOptions {
 export interface EjectOptions {
   /** Target project root directory */
   projectRoot: string;
+  /** Specific workflow ID to eject (if not provided, ejects all) */
+  workflowId?: string;
   /** Restore from backup if available */
   restoreBackup?: boolean;
   /** Remove all BTW-related content */

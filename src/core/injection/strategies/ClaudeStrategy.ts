@@ -55,30 +55,25 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
         await fileSystem.mkdir(agentsPath);
       }
 
-      // 2. Check for existing BTW agents if not forcing
+      // 2. Check if this specific workflow is already injected (unless forcing)
       if (!options.force && agentsPath) {
-        const existingAgents = await this.findBtwAgents(agentsPath);
-        if (existingAgents.length > 0) {
-          // Check if they belong to a different workflow
-          const existingWorkflowId = await this.getWorkflowIdFromAgents(agentsPath);
-          if (existingWorkflowId && existingWorkflowId !== manifest.id) {
-            throw new BTWError(
-              ErrorCode.INJECTION_FAILED,
-              `A different workflow (${existingWorkflowId}) is already injected. Use --force to override.`,
-              {
-                context: {
-                  existingWorkflowId,
-                  newWorkflowId: manifest.id,
-                },
-              }
-            );
-          }
+        const isAlreadyInjected = await this.isWorkflowInjected(options.projectRoot, manifest.id);
+        if (isAlreadyInjected) {
+          throw new BTWError(
+            ErrorCode.INJECTION_FAILED,
+            `Workflow '${manifest.id}' is already injected. Use --force to re-inject.`,
+            {
+              context: {
+                workflowId: manifest.id,
+              },
+            }
+          );
         }
       }
 
-      // 3. Create backup of existing agents if requested
+      // 3. Create backup of existing agents for THIS workflow if requested
       if (options.backup && agentsPath) {
-        const existingAgents = await this.findBtwAgents(agentsPath);
+        const existingAgents = await this.findBtwAgentsForWorkflow(agentsPath, manifest.id);
         if (existingAgents.length > 0) {
           // Backup by creating .btw-backup copies
           for (const agentFile of existingAgents) {
@@ -92,9 +87,9 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
         }
       }
 
-      // 4. Remove existing BTW agents if forcing
+      // 4. Remove existing agents for THIS workflow only if forcing
       if (options.force && agentsPath) {
-        const existingAgents = await this.findBtwAgents(agentsPath);
+        const existingAgents = await this.findBtwAgentsForWorkflow(agentsPath, manifest.id);
         for (const agentFile of existingAgents) {
           await fileSystem.remove(agentFile);
         }
@@ -142,9 +137,12 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
     const claudeDir = path.join(options.projectRoot, '.claude');
 
     try {
-      // 1. Remove BTW agent files
+      // 1. Remove BTW agent files (specific workflow or all)
       if (agentsPath) {
-        const btwAgents = await this.findBtwAgents(agentsPath);
+        const btwAgents = options.workflowId
+          ? await this.findBtwAgentsForWorkflow(agentsPath, options.workflowId)
+          : await this.findBtwAgents(agentsPath);
+
         for (const agentFile of btwAgents) {
           await fileSystem.remove(agentFile);
           // Also remove backup if exists
@@ -165,15 +163,21 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
         }
       }
 
-      // 2. Clean BTW content from CLAUDE.md
+      // 2. Clean BTW content from CLAUDE.md (only if ejecting all or specific workflow marker found)
       if (await fileSystem.exists(instructionsPath)) {
         const content = await fileSystem.readFile(instructionsPath);
-        const cleanedContent = this.removeBtwContent(content);
 
-        if (cleanedContent.trim()) {
-          await fileSystem.writeFile(instructionsPath, cleanedContent.trim() + '\n');
-        } else {
-          await fileSystem.remove(instructionsPath);
+        // Only remove BTW content if ejecting all workflows or if the specific workflow is in CLAUDE.md
+        const shouldCleanClaudeMd = !options.workflowId || content.includes(`BTW:${options.workflowId}:`);
+
+        if (shouldCleanClaudeMd) {
+          const cleanedContent = this.removeBtwContent(content);
+
+          if (cleanedContent.trim()) {
+            await fileSystem.writeFile(instructionsPath, cleanedContent.trim() + '\n');
+          } else {
+            await fileSystem.remove(instructionsPath);
+          }
         }
       }
 
@@ -255,9 +259,9 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
       if (agentsPath && await fileSystem.exists(agentsPath)) {
         const files = await fileSystem.readdir(agentsPath);
         for (const file of files) {
-          if (file.endsWith('.md')) {
+          if (file.name.endsWith('.md')) {
             try {
-              await fileSystem.readFile(path.join(agentsPath, file));
+              await fileSystem.readFile(file.path);
             } catch {
               return false;
             }
@@ -443,16 +447,15 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
       const files = await fileSystem.readdir(agentsPath);
 
       for (const file of files) {
-        if (!file.endsWith('.md') || file.endsWith('.btw-backup')) {
+        if (!file.name.endsWith('.md') || file.name.endsWith('.btw-backup')) {
           continue;
         }
 
-        const filePath = path.join(agentsPath, file);
         try {
-          const content = await fileSystem.readFile(filePath);
+          const content = await fileSystem.readFile(file.path);
           // Check if this agent was created by BTW
           if (content.includes('# BTW metadata') || content.includes('# workflow:')) {
-            btwAgents.push(filePath);
+            btwAgents.push(file.path);
           }
         } catch {
           // Skip files we can't read
@@ -466,31 +469,91 @@ export class ClaudeStrategy extends BaseInjectionStrategy {
   }
 
   /**
-   * Get workflow ID from existing BTW agents
+   * Find BTW-injected agent files for a specific workflow
    */
-  private async getWorkflowIdFromAgents(agentsPath: string): Promise<string | null> {
+  private async findBtwAgentsForWorkflow(agentsPath: string, workflowId: string): Promise<string[]> {
+    const btwAgents: string[] = [];
+
     try {
       const files = await fileSystem.readdir(agentsPath);
 
       for (const file of files) {
-        if (!file.endsWith('.md') || file.endsWith('.btw-backup')) {
+        if (!file.name.endsWith('.md') || file.name.endsWith('.btw-backup')) {
           continue;
         }
 
-        const filePath = path.join(agentsPath, file);
-        const content = await fileSystem.readFile(filePath);
+        try {
+          const content = await fileSystem.readFile(file.path);
+          // Check if this agent belongs to the specified workflow
+          const match = content.match(/# workflow: (.+)/);
+          if (match && match[1].trim() === workflowId) {
+            btwAgents.push(file.path);
+          }
+        } catch {
+          // Skip files we can't read
+        }
+      }
+    } catch {
+      // Directory doesn't exist yet
+    }
 
-        // Look for workflow comment in frontmatter
-        const match = content.match(/# workflow: (.+)/);
-        if (match) {
-          return match[1].trim();
+    return btwAgents;
+  }
+
+  /**
+   * Get workflow ID from existing BTW agents (returns first found)
+   */
+  private async getWorkflowIdFromAgents(agentsPath: string): Promise<string | null> {
+    const ids = await this.getAllWorkflowIdsFromAgents(agentsPath);
+    return ids.length > 0 ? ids[0] : null;
+  }
+
+  /**
+   * Get all workflow IDs from existing BTW agents
+   */
+  async getAllWorkflowIdsFromAgents(agentsPath: string): Promise<string[]> {
+    const workflowIds = new Set<string>();
+
+    try {
+      const files = await fileSystem.readdir(agentsPath);
+
+      for (const file of files) {
+        if (!file.name.endsWith('.md') || file.name.endsWith('.btw-backup')) {
+          continue;
+        }
+
+        try {
+          const content = await fileSystem.readFile(file.path);
+
+          // Look for workflow comment in frontmatter
+          const match = content.match(/# workflow: (.+)/);
+          if (match) {
+            workflowIds.add(match[1].trim());
+          }
+        } catch {
+          // Skip files we can't read
         }
       }
     } catch {
       // Directory doesn't exist
     }
 
-    return null;
+    return Array.from(workflowIds);
+  }
+
+  /**
+   * Check if a specific workflow is injected
+   */
+  async isWorkflowInjected(projectRoot: string, workflowId: string): Promise<boolean> {
+    const paths = pathResolver.resolveAiToolPaths(projectRoot, 'claude');
+    const { agentsPath } = paths;
+
+    if (!agentsPath) {
+      return false;
+    }
+
+    const injectedIds = await this.getAllWorkflowIdsFromAgents(agentsPath);
+    return injectedIds.includes(workflowId);
   }
 
   /**

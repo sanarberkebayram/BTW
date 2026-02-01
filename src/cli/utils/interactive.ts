@@ -126,12 +126,12 @@ export class InteractiveList {
           this.moveDown();
           return;
         }
-      }
-      // Plain Escape
-      if (key.length === 1) {
-        this.cancel();
+        // Unknown escape sequence, ignore
         return;
       }
+      // Plain Escape (not followed by '[' which is 91)
+      this.cancel();
+      return;
     }
 
     // Handle regular keys
@@ -248,7 +248,6 @@ export class InteractiveList {
       // Set up raw mode to capture keypresses
       process.stdin.setRawMode(true);
       process.stdin.resume();
-      process.stdin.setEncoding('utf8');
 
       // Handle Ctrl+C
       this.rl = readline.createInterface({
