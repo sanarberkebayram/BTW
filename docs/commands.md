@@ -243,6 +243,56 @@ btw remove game-agent --purge
 
 ---
 
+## btw update
+
+Update installed workflows from their source repositories.
+
+### Usage
+
+```bash
+btw update [workflow-id] [options]
+```
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `workflow-id` | ID of the workflow to update (optional) |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `-a, --all` | Update all installed workflows |
+
+### Examples
+
+```bash
+# Update a specific workflow
+btw update game-agent
+
+# Update all installed workflows
+btw update --all
+
+# Update all (shorthand - no args defaults to all)
+btw update
+```
+
+### Behavior
+
+1. Fetches the latest changes from the source repository (git pull)
+2. Re-parses the manifest to get updated version
+3. Updates the workflow state with new version and commit hash
+4. Displays summary of changes
+
+### Notes
+
+- Only workflows installed from Git repositories can be updated
+- Local workflows (installed from local paths) will be skipped
+- The update performs a `git pull` on the workflow directory
+
+---
+
 ## Environment Variables
 
 BTW respects the following environment variables:

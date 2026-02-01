@@ -9,13 +9,14 @@ import { createAddCommand } from './commands/add.js';
 import { createListCommand } from './commands/list.js';
 import { createInjectCommand } from './commands/inject.js';
 import { createRemoveCommand } from './commands/remove.js';
+import { createUpdateCommand } from './commands/update.js';
 import { output } from './utils/output.js';
 import { checkForUpdates } from './utils/updateChecker.js';
 
 /**
  * BTW CLI version
  */
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 /**
  * Create and configure the CLI program
@@ -39,6 +40,7 @@ function createProgram(): Command {
   program.addCommand(createListCommand());
   program.addCommand(createInjectCommand());
   program.addCommand(createRemoveCommand());
+  program.addCommand(createUpdateCommand());
 
   // Add help examples
   program.addHelpText('after', `
@@ -48,10 +50,12 @@ Examples:
   $ btw list                        List installed workflows
   $ btw inject my-workflow          Inject workflow into Claude
   $ btw inject my-wf -t cursor      Inject into Cursor
+  $ btw update my-workflow          Update a workflow from source
+  $ btw update --all                Update all workflows
   $ btw remove my-workflow          Remove a workflow
 
 Documentation:
-  https://github.com/btw-workflows/btw
+  https://github.com/sanarberkebayram/btw
 `);
 
   // Error handling
