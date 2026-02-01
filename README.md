@@ -1,5 +1,10 @@
 # BTW (Bring The Workflow)
 
+[![npm version](https://img.shields.io/npm/v/@sanarberkebayram/btw.svg)](https://www.npmjs.com/package/@sanarberkebayram/btw)
+[![npm downloads](https://img.shields.io/npm/dm/@sanarberkebayram/btw.svg)](https://www.npmjs.com/package/@sanarberkebayram/btw)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/node/v/@sanarberkebayram/btw.svg)](https://nodejs.org)
+
 **AI-aware workflow package manager for developers**
 
 BTW lets you share and manage AI coding workflows across different tools (Claude, Cursor, Windsurf, Copilot) without vendor lock-in. Package your AI instructions, rules, and configurations in GitHub repositories and inject them into any project with a single command.
