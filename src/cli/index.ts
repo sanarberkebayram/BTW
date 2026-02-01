@@ -10,11 +10,12 @@ import { createListCommand } from './commands/list.js';
 import { createInjectCommand } from './commands/inject.js';
 import { createRemoveCommand } from './commands/remove.js';
 import { output } from './utils/output.js';
+import { checkForUpdates } from './utils/updateChecker.js';
 
 /**
  * BTW CLI version
  */
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 /**
  * Create and configure the CLI program
@@ -71,6 +72,9 @@ Documentation:
  * Main entry point
  */
 async function main(): Promise<void> {
+  // Check for updates before running commands
+  await checkForUpdates(VERSION);
+
   const program = createProgram();
 
   try {
