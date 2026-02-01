@@ -68,11 +68,12 @@ async function executeUpdate(
  */
 async function updateSingleWorkflow(workflowId: string, options: UpdateOptions): Promise<void> {
   const spinner = ora(`Updating workflow '${workflowId}'...`).start();
+  const projectRoot = process.cwd();
 
   try {
-    // Get workflow details before update to check if it was injected
-    const beforeResult = await workflowManager.get(workflowId);
-    const wasInjected = beforeResult.success && beforeResult.data?.state.lastInjectedAt;
+    // Check if workflow is currently injected in this project (check actual files, not just state)
+    const currentStatus = await injectionEngine.getStatus('claude', projectRoot);
+    const isCurrentlyInjected = currentStatus.isInjected && currentStatus.workflowId === workflowId;
 
     // Update the workflow
     const result = await workflowManager.update(workflowId);
@@ -84,8 +85,8 @@ async function updateSingleWorkflow(workflowId: string, options: UpdateOptions):
         output.keyValue('Commit', result.data.contentHash.substring(0, 7));
       }
 
-      // Re-inject if enabled and workflow was previously injected
-      if (options.inject && wasInjected) {
+      // Re-inject if enabled and workflow is currently injected in this project
+      if (options.inject && isCurrentlyInjected) {
         await reinjectWorkflow(workflowId, options.target);
       }
     } else {
@@ -104,6 +105,8 @@ async function updateSingleWorkflow(workflowId: string, options: UpdateOptions):
  * @param options - Update options
  */
 async function updateAllWorkflows(options: UpdateOptions): Promise<void> {
+  const projectRoot = process.cwd();
+
   // Get list of all workflows
   const listResult = await workflowManager.list({ detailed: true });
 
@@ -120,6 +123,10 @@ async function updateAllWorkflows(options: UpdateOptions): Promise<void> {
     return;
   }
 
+  // Check which workflow is currently injected in this project
+  const currentStatus = await injectionEngine.getStatus('claude', projectRoot);
+  const currentlyInjectedWorkflowId = currentStatus.isInjected ? currentStatus.workflowId : null;
+
   output.info(`Updating ${workflows.length} workflow(s)...\n`);
 
   let successCount = 0;
@@ -129,7 +136,7 @@ async function updateAllWorkflows(options: UpdateOptions): Promise<void> {
 
   for (const workflow of workflows) {
     const workflowId = workflow.state.workflowId;
-    const wasInjected = !!workflow.state.lastInjectedAt;
+    const isCurrentlyInjected = workflowId === currentlyInjectedWorkflowId;
     const spinner = ora(`Updating '${workflowId}'...`).start();
 
     try {
@@ -139,8 +146,8 @@ async function updateAllWorkflows(options: UpdateOptions): Promise<void> {
         spinner.succeed(`'${workflowId}' updated to ${result.data.version}`);
         successCount++;
 
-        // Track for re-injection if it was previously injected
-        if (options.inject && wasInjected) {
+        // Track for re-injection if it's currently injected in this project
+        if (options.inject && isCurrentlyInjected) {
           workflowsToReinject.push({ id: workflowId, target: options.target });
         }
       } else {
