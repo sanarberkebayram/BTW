@@ -18,8 +18,10 @@ export interface AgentDefinition {
   name: string;
   /** Description of what this agent does */
   description: string;
-  /** System prompt or instructions for this agent */
-  systemPrompt: string;
+  /** Path to the agent's prompt file (relative to btw.yaml) */
+  file?: string;
+  /** System prompt or instructions for this agent (inline, use 'file' for external) */
+  systemPrompt?: string;
   /** Optional model override for this specific agent */
   model?: string;
   /** Optional temperature setting */

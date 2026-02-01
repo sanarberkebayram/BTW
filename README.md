@@ -83,7 +83,7 @@ btw inject my-workflow --force
 
 ## Creating a Workflow
 
-Create a `btw.yaml` in your repository:
+Create a `btw.yaml` in your repository with agents referencing external files:
 
 ```yaml
 version: "1.0"
@@ -100,20 +100,29 @@ agents:
   - id: main-agent
     name: Main Agent
     description: Primary agent for this workflow
-    system_prompt: |
-      You are an expert assistant specialized in...
-
-      Your responsibilities:
-      1. Help with task A
-      2. Provide guidance on B
-      3. Review and improve C
+    file: agents/main-agent.md  # Path relative to btw.yaml
+    tags:
+      - general
 ```
 
-Then push to GitHub and share:
+Then create the agent file at `agents/main-agent.md`:
+
+```markdown
+You are an expert assistant specialized in...
+
+Your responsibilities:
+1. Help with task A
+2. Provide guidance on B
+3. Review and improve C
+```
+
+Push to GitHub and share:
 
 ```bash
 btw add your-username/your-workflow
 ```
+
+> **Note:** You can also use inline `system_prompt` instead of `file` for simple agents.
 
 ## Supported AI Tools
 

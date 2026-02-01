@@ -26,12 +26,14 @@ export const AITargetSchema = z.enum(['claude', 'cursor', 'windsurf', 'copilot']
 
 /**
  * Zod schema for AgentDefinition validation
+ * Note: Either 'file' or 'systemPrompt' must be provided
  */
 export const AgentDefinitionSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   description: z.string(),
-  systemPrompt: z.string().min(1),
+  file: z.string().optional(),
+  systemPrompt: z.string().optional(),
   model: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   tags: z.array(z.string()).optional(),
@@ -114,7 +116,10 @@ export class ManifestParser {
       });
     }
 
-    return this.parseString(content, filePath, options);
+    // Get the directory containing the manifest for resolving relative paths
+    const manifestDir = path.dirname(filePath);
+
+    return this.parseString(content, filePath, options, manifestDir);
   }
 
   /**
@@ -122,11 +127,13 @@ export class ManifestParser {
    * @param content - YAML string content
    * @param sourcePath - Source path for error reporting
    * @param options - Parse options
+   * @param manifestDir - Directory containing the manifest (for resolving relative paths)
    */
   async parseString(
     content: string,
     sourcePath: string = '<string>',
-    options?: ParseOptions
+    options?: ParseOptions,
+    manifestDir?: string
   ): Promise<ParsedManifest> {
     // Parse YAML
     let raw: RawManifest;
@@ -182,8 +189,8 @@ export class ManifestParser {
       });
     }
 
-    // Transform the raw manifest to typed Manifest
-    const manifest = this.transform(raw);
+    // Transform the raw manifest to typed Manifest (load file contents if needed)
+    const manifest = await this.transform(raw, manifestDir);
 
     return {
       manifest,
@@ -334,8 +341,30 @@ export class ManifestParser {
             });
           }
 
-          // Validate systemPrompt or system_prompt is a string
+          // Validate that either 'file' or 'systemPrompt' is provided
           const systemPrompt = agent.systemPrompt ?? agent.system_prompt;
+          const file = agent.file;
+
+          if (!file && !systemPrompt) {
+            errors.push({
+              path: `agents[${i}]`,
+              message: `Agent must have either 'file' or 'systemPrompt' (or 'system_prompt')`,
+              expected: 'file or systemPrompt',
+              actual: 'neither',
+            });
+          }
+
+          // Validate file is a string if provided
+          if (file !== undefined && typeof file !== 'string') {
+            errors.push({
+              path: `agents[${i}].file`,
+              message: `Agent 'file' must be a string path`,
+              expected: 'string',
+              actual: typeof file,
+            });
+          }
+
+          // Validate systemPrompt is a string if provided
           if (systemPrompt !== undefined && typeof systemPrompt !== 'string') {
             errors.push({
               path: `agents[${i}].systemPrompt`,
@@ -410,13 +439,14 @@ export class ManifestParser {
   /**
    * Transform raw manifest to validated Manifest type
    * @param raw - Raw manifest object
+   * @param manifestDir - Directory containing the manifest (for resolving relative paths)
    */
-  transform(raw: RawManifest): Manifest {
-    // Transform agents
+  async transform(raw: RawManifest, manifestDir?: string): Promise<Manifest> {
+    // Transform agents (load file contents if needed)
     const agents: AgentDefinition[] = [];
     if (Array.isArray(raw.agents)) {
       for (const agent of raw.agents) {
-        agents.push(this.transformAgent(agent as RawAgentDefinition));
+        agents.push(await this.transformAgent(agent as RawAgentDefinition, manifestDir));
       }
     }
 
@@ -482,10 +512,29 @@ export class ManifestParser {
   /**
    * Transform a raw agent definition
    * @param raw - Raw agent definition
+   * @param manifestDir - Directory containing the manifest (for resolving relative paths)
    */
-  private transformAgent(raw: RawAgentDefinition): AgentDefinition {
+  private async transformAgent(raw: RawAgentDefinition, manifestDir?: string): Promise<AgentDefinition> {
     // Handle both camelCase and snake_case for systemPrompt
-    const systemPrompt = raw.systemPrompt ?? raw.system_prompt;
+    let systemPrompt = raw.systemPrompt ?? raw.system_prompt;
+    const filePath = raw.file;
+
+    // If file is specified, load content from file
+    if (filePath && typeof filePath === 'string' && manifestDir) {
+      const fullPath = path.join(manifestDir, filePath);
+      try {
+        systemPrompt = await fileSystem.readFile(fullPath);
+      } catch (error) {
+        throw new BTWError(
+          ErrorCode.FILE_READ_ERROR,
+          `Failed to read agent file '${filePath}': ${error instanceof Error ? error.message : error}`,
+          {
+            context: { filePath, fullPath },
+            cause: error instanceof Error ? error : undefined,
+          }
+        );
+      }
+    }
 
     const agent: AgentDefinition = {
       id: String(raw.id ?? ''),
@@ -493,6 +542,11 @@ export class ManifestParser {
       description: String(raw.description ?? ''),
       systemPrompt: String(systemPrompt ?? ''),
     };
+
+    // Store original file path if provided
+    if (filePath && typeof filePath === 'string') {
+      agent.file = filePath;
+    }
 
     // Add optional fields if present
     if (raw.model !== undefined) {

@@ -880,7 +880,7 @@ describe('ManifestParser', () => {
         expect(result.errors.some(e => e.path === 'agents[0].name')).toBe(true);
       });
 
-      it('should return error for agent missing systemPrompt', () => {
+      it('should return error for agent missing both file and systemPrompt', () => {
         const raw: RawManifest = {
           version: '1.0',
           id: 'test',
@@ -892,7 +892,8 @@ describe('ManifestParser', () => {
 
         const result = parser.validate(raw);
 
-        expect(result.errors.some(e => e.path === 'agents[0].systemPrompt')).toBe(true);
+        // Now requires either 'file' or 'systemPrompt'
+        expect(result.errors.some(e => e.path === 'agents[0]' && e.message.includes('file'))).toBe(true);
       });
 
       it('should accept agent with snake_case system_prompt', () => {
@@ -1009,7 +1010,7 @@ describe('ManifestParser', () => {
           targets: ['claude'],
           agents: [
             { id: 'a1', name: 'A1', description: 'D1', systemPrompt: 'P1' },
-            { id: 'a2' }, // Missing name and systemPrompt
+            { id: 'a2' }, // Missing name, description, and file/systemPrompt
             { id: 'a3', name: 'A3', description: 'D3', systemPrompt: 'P3' },
           ],
         };
@@ -1017,7 +1018,8 @@ describe('ManifestParser', () => {
         const result = parser.validate(raw);
 
         expect(result.errors.some(e => e.path === 'agents[1].name')).toBe(true);
-        expect(result.errors.some(e => e.path === 'agents[1].systemPrompt')).toBe(true);
+        // Now requires either 'file' or 'systemPrompt'
+        expect(result.errors.some(e => e.path === 'agents[1]' && e.message.includes('file'))).toBe(true);
         expect(result.errors.filter(e => e.path.startsWith('agents[0]'))).toHaveLength(0);
         expect(result.errors.filter(e => e.path.startsWith('agents[2]'))).toHaveLength(0);
       });
@@ -1095,7 +1097,7 @@ describe('ManifestParser', () => {
   // ===========================================================================
 
   describe('transform()', () => {
-    it('should transform raw manifest to typed Manifest', () => {
+    it('should transform raw manifest to typed Manifest', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test-workflow',
@@ -1112,7 +1114,7 @@ describe('ManifestParser', () => {
         ],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.version).toBe('1.0');
       expect(result.id).toBe('test-workflow');
@@ -1124,7 +1126,7 @@ describe('ManifestParser', () => {
       expect(result.agents[0].systemPrompt).toBe('System prompt');
     });
 
-    it('should transform snake_case system_prompt to camelCase', () => {
+    it('should transform snake_case system_prompt to camelCase', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1141,12 +1143,12 @@ describe('ManifestParser', () => {
         ],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.agents[0].systemPrompt).toBe('Snake case prompt');
     });
 
-    it('should prefer camelCase systemPrompt over snake_case', () => {
+    it('should prefer camelCase systemPrompt over snake_case', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1164,12 +1166,12 @@ describe('ManifestParser', () => {
         ],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.agents[0].systemPrompt).toBe('CamelCase prompt');
     });
 
-    it('should transform optional author field', () => {
+    it('should transform optional author field', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1180,12 +1182,12 @@ describe('ManifestParser', () => {
         agents: [{ id: 'a1', name: 'A1', description: 'D', systemPrompt: 'P' }],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.author).toBe('Test Author');
     });
 
-    it('should transform optional license field', () => {
+    it('should transform optional license field', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1196,12 +1198,12 @@ describe('ManifestParser', () => {
         agents: [{ id: 'a1', name: 'A1', description: 'D', systemPrompt: 'P' }],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.license).toBe('MIT');
     });
 
-    it('should transform optional repository field', () => {
+    it('should transform optional repository field', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1212,12 +1214,12 @@ describe('ManifestParser', () => {
         agents: [{ id: 'a1', name: 'A1', description: 'D', systemPrompt: 'P' }],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.repository).toBe('https://github.com/test/repo');
     });
 
-    it('should transform hooks with snake_case', () => {
+    it('should transform hooks with snake_case', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1233,7 +1235,7 @@ describe('ManifestParser', () => {
         },
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.hooks?.preInject).toEqual(['cmd1', 'cmd2']);
       expect(result.hooks?.postInject).toEqual(['cmd3']);
@@ -1241,7 +1243,7 @@ describe('ManifestParser', () => {
       expect(result.hooks?.postRemove).toEqual(['cmd5']);
     });
 
-    it('should transform hooks with camelCase', () => {
+    it('should transform hooks with camelCase', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1257,7 +1259,7 @@ describe('ManifestParser', () => {
         },
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.hooks?.preInject).toEqual(['cmd1']);
       expect(result.hooks?.postInject).toEqual(['cmd2']);
@@ -1265,7 +1267,7 @@ describe('ManifestParser', () => {
       expect(result.hooks?.postRemove).toEqual(['cmd4']);
     });
 
-    it('should transform metadata', () => {
+    it('should transform metadata', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1279,12 +1281,12 @@ describe('ManifestParser', () => {
         },
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.metadata).toEqual({ custom: 'value', nested: { key: 'val' } });
     });
 
-    it('should transform agent optional fields', () => {
+    it('should transform agent optional fields', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1304,14 +1306,14 @@ describe('ManifestParser', () => {
         ],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.agents[0].model).toBe('gpt-4');
       expect(result.agents[0].temperature).toBe(0.7);
       expect(result.agents[0].tags).toEqual(['tag1', 'tag2']);
     });
 
-    it('should filter invalid targets', () => {
+    it('should filter invalid targets', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1321,13 +1323,13 @@ describe('ManifestParser', () => {
         agents: [{ id: 'a1', name: 'A1', description: 'D', systemPrompt: 'P' }],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.targets).toEqual(['claude', 'cursor']);
       expect(result.targets).not.toContain('invalid');
     });
 
-    it('should handle empty agents array gracefully', () => {
+    it('should handle empty agents array gracefully', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1337,12 +1339,12 @@ describe('ManifestParser', () => {
         agents: [],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.agents).toEqual([]);
     });
 
-    it('should handle missing version by using default', () => {
+    it('should handle missing version by using default', async () => {
       const raw: RawManifest = {
         id: 'test',
         name: 'Test',
@@ -1351,12 +1353,12 @@ describe('ManifestParser', () => {
         agents: [{ id: 'a1', name: 'A1', description: 'D', systemPrompt: 'P' }],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.version).toBe(MANIFEST_SCHEMA.version);
     });
 
-    it('should convert non-string values to strings', () => {
+    it('should convert non-string values to strings', async () => {
       const raw: RawManifest = {
         version: 1.0 as unknown as string,
         id: 123 as unknown as string,
@@ -1366,7 +1368,7 @@ describe('ManifestParser', () => {
         agents: [{ id: 'a1', name: 'A1', description: 'D', systemPrompt: 'P' }],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(typeof result.version).toBe('string');
       expect(typeof result.id).toBe('string');
@@ -1374,7 +1376,7 @@ describe('ManifestParser', () => {
       expect(typeof result.description).toBe('string');
     });
 
-    it('should convert tags to strings', () => {
+    it('should convert tags to strings', async () => {
       const raw: RawManifest = {
         version: '1.0',
         id: 'test',
@@ -1392,7 +1394,7 @@ describe('ManifestParser', () => {
         ],
       };
 
-      const result = parser.transform(raw);
+      const result = await parser.transform(raw);
 
       expect(result.agents[0].tags).toEqual(['1', 'true', 'string']);
     });

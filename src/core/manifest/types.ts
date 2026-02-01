@@ -30,6 +30,7 @@ export interface RawAgentDefinition {
   id?: unknown;
   name?: unknown;
   description?: unknown;
+  file?: unknown; // Path to agent prompt file (relative to btw.yaml)
   systemPrompt?: unknown;
   system_prompt?: unknown; // Alternative snake_case format
   model?: unknown;
@@ -95,7 +96,7 @@ export const MANIFEST_SCHEMA: ManifestSchema = {
   version: '1.0',
   requiredFields: ['version', 'id', 'name', 'description', 'targets', 'agents'],
   optionalFields: ['author', 'license', 'repository', 'hooks', 'metadata'],
-  agentRequiredFields: ['id', 'name', 'systemPrompt'],
+  agentRequiredFields: ['id', 'name', 'description'], // Note: either 'file' or 'systemPrompt' is also required
   supportedTargets: ['claude', 'cursor', 'windsurf', 'copilot'],
 };
 
@@ -124,12 +125,14 @@ export const AITargetSchema = z.enum(['claude', 'cursor', 'windsurf', 'copilot']
 
 /**
  * Zod schema for agent definition validation
+ * Note: Either 'file' or 'systemPrompt' must be provided
  */
 export const AgentDefinitionSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   description: z.string(),
-  systemPrompt: z.string().min(1),
+  file: z.string().optional(), // Path to agent prompt file
+  systemPrompt: z.string().optional(), // Inline prompt (loaded from file if 'file' is used)
   model: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   tags: z.array(z.string()).optional(),
